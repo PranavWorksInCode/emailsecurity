@@ -1,0 +1,36 @@
+# Implementation & Testing Guide
+
+## How to Run the Simulation
+
+To see the system in action, you need to simulate "Traffic" (incoming emails) while the "Gateway" (security guard) is running.
+
+### Step 1: Start the Gateway (The Guard)
+1.  Open a terminal.
+2.  Run the following command:
+    ```bash
+    python email_shield/gateway.py
+    ```
+3.  You will see: `Monitoring 'email_shield/incoming' ...`
+    *   *Leave this terminal open. It is watching the door.*
+
+### Step 2: Start the Traffic Generator (The World)
+1.  Open a **second** terminal window.
+2.  Run the following command:
+    ```bash
+    python tools/generate_traffic.py
+    ```
+3.  This script will automatically create a random email file (Safe or Phishing) every 3 seconds inside the incoming folder.
+
+### Step 3: Watch the Action
+*   Look at the **First Terminal** (Gateway).
+*   You will see it reacting to every file the Generator creates:
+    ```text
+    Scanning .../email_5.txt
+     -> Found URL: ...
+     [!!!] PHISHING DETECTED. Moving to Quarantine.
+    ```
+
+## Folder Structure Logic
+*   **`email_shield/incoming/`**: The "Mail Server". New files arrive here.
+*   **`email_shield/inbox/`**: Safe emails are allowed through to here.
+*   **`email_shield/quarantine/`**: Dangerous emails are trapped here.

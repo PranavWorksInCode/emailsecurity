@@ -1,0 +1,33 @@
+# Future Deployment Strategies
+
+This document outlines potential future integrations for the AI Phishing Detector, beyond the initial Email Shield implementation.
+
+## 1. Browser Defense (Endpoint Protection)
+**Concept**: A browser extension or background agent installed on employee endpoints.
+- **Workflow**: 
+  1. User navigates to a URL.
+  2. Extension captures the URL before the page loads.
+  3. URL is checked against the local model or via API.
+- **Action**: 
+  - If **Safe**: Page loads normally.
+  - If **Phishing**: Browser displays a "Block Page" with a warning and prevents access.
+- **Key Tech**: JavaScript (Extension), Python (Native Host Messaging or API).
+
+## 2. Incident Response Automation (SOAR)
+**Concept**: Integrating the detector into a Security Orchestration, Automation, and Response (SOAR) platform like Palo Alto XSOAR or Splunk Phantom.
+- **Workflow**:
+  1. Employee reports a suspicious email.
+  2. SOAR platform extracts the URL.
+  3. Our script automatically scans the URL.
+- **Action**:
+  - **High Confidence Phishing**: Auto-delete the email from all inboxes.
+  - **Low Confidence**: Create a ticket for a human analyst.
+  - **Safe**: Auto-close the ticket and notify the user.
+
+## 3. Dedicated API Microservice
+**Concept**: A headless REST API that exposes the model's functionality to the entire organization.
+- **Workflow**: 
+  - Internal tools (Chat apps, Customer Support portals) send HTTP POST requests to the API.
+  - Payload: `{"url": "http://suspicious-link.com"}`
+- **Action**: API returns JSON verdict `{"is_phishing": true, "confidence": 0.95}`.
+- **Key Tech**: FastAPI or Flask, Docker (for containerization).

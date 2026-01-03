@@ -1,0 +1,31 @@
+1. AI & Machine Learning Security (🔥 Very Hot)
+AI is the biggest trend right now. Projects that combine Cybersecurity with AI are extremely valuable for portfolios.
+
+AI-Powered Phishing Detector:
+What it is: A Python-based tool that scans emails or URLs and uses a Machine Learning model (trained on datasets like Enron or PhishTank) to predict if they are phishing attempts.
+Tech Stack: Python, Scikit-learn/TensorFlow, Pandas, NLP.
+Why it's in demand: Companies are desperate for better automated defense against sophisticated AI-generated phishing.
+Behavioral Anomaly Detection System:
+What it is: A system that learns "normal" user behavior (login times, file access patterns) and flags anomalies that might indicate a compromised account or insider threat.
+Tech Stack: Python, Splunk (or ELK Stack), Data Analysis.
+2. Web & Cloud Security
+Custom Web Application Firewall (WAF):
+What it is: A reverse proxy server that inspects incoming HTTP traffic and blocks common attacks like SQL Injection (SQLi) and Cross-Site Scripting (XSS) before they reach the web server.
+Tech Stack: Python (can use Flask/Django middleware) or Go.
+Why it's in demand: Shows deep understanding of how web attacks actually work.
+Cloud Security Auditor:
+What it is: A script that automatically scans an AWS/Azure/GCP environment to find S3 buckets left open to the public, weak IAM policies, or unencrypted databases.
+Tech Stack: Python (Boto3 for AWS), Bash.
+3. Malware Analysis & Forensics
+Automated File Integrity Monitor (Ransomware Detector):
+What it is: A background service that monitors critical directories. If files are modified rapidly or encrypted (high entropy), it kills the process and alerts the user.
+Tech Stack: Python (Watchdog library), PowerPoint/C++ (for lower-level access).
+Why it's in demand: Ransomware is still a top threat.
+Sandboxed Malware Analysis Tool:
+What it is: A script that safely executes a suspicious file in a virtual environment (sandbox), records its API calls and network activity, and generates a report.
+Tech Stack: Python, VirtualBox API, Cuckoo components.
+4. Cryptography & Privacy
+Zero-Knowledge Password Manager:
+What it is: A password manager where the server stores user data but has absolutely no way to decrypt it (only the user has the key).
+Tech Stack: Python or JavaScript, AES-256, Hashing algorithms (Argon2).
+Why it's in demand: Privacy-first architectures are becoming standard.
