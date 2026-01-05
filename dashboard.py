@@ -56,17 +56,33 @@ with c1:
     verdict_counts = df['verdict'].value_counts().reset_index()
     verdict_counts.columns = ['Verdict', 'Count']
     
-    chart = alt.Chart(verdict_counts).mark_bar().encode(
-        x='Verdict',
-        y='Count',
-        color=alt.Color('Verdict', scale=alt.Scale(domain=['SAFE', 'PHISHING'], range=['#00CC96', '#FF4B4B']))
+    chart = alt.Chart(verdict_counts).mark_arc(innerRadius=50).encode(
+        theta=alt.Theta(field="Count", type="quantitative"),
+        color=alt.Color('Verdict', scale=alt.Scale(domain=['SAFE', 'PHISHING'], range=['#00CC96', '#FF4B4B'])),
+        tooltip=['Verdict', 'Count']
     )
     st.altair_chart(chart, use_container_width=True)
 
 with c2:
-    st.subheader("Top Targeted Users")
-    user_counts = df[df['verdict'] == 'PHISHING']['user_email'].value_counts().head(5)
-    st.bar_chart(user_counts)
+    st.subheader("Top Risk Targets")
+    # Identify top 5
+    top_phish_users = df[df['verdict'] == 'PHISHING']['user_email'].value_counts().head(5).index
+    
+    if len(top_phish_users) > 0:
+        # Data for chart
+        subset = df[df['user_email'].isin(top_phish_users)]
+        grouped = subset.groupby(['user_email', 'verdict']).size().reset_index(name='Count')
+        
+        chart = alt.Chart(grouped).mark_bar().encode(
+            x=alt.X('user_email', title='User'),
+            y=alt.Y('Count', title='Emails'),
+            color=alt.Color('verdict', scale=alt.Scale(domain=['SAFE', 'PHISHING'], range=['#00CC96', '#FF4B4B'])),
+            xOffset='verdict:N',
+            tooltip=['user_email', 'verdict', 'Count']
+        )
+        st.altair_chart(chart, use_container_width=True)
+    else:
+        st.caption("No phishing targets found.")
 
 # --- USER FORENSICS ---
 st.divider()
