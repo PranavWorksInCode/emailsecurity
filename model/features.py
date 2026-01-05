@@ -1,10 +1,21 @@
 import re
 from urllib.parse import urlparse
 
-def extract_features(url):
+from typing import Dict, Any
+
+def extract_features(url: str) -> Dict[str, Any]:
     """
-    Extracts numerical features from a URL string.
-    Returns a dictionary of features.
+    Extracts numerical features from a URL string for ML processing.
+    
+    Args:
+        url: The URL string to analyze.
+        
+    Returns:
+        Dictionary containing features:
+        - url_length (int)
+        - hostname_length (int)
+        - dot_count (int)
+        - ...and other pattern matches.
     """
     features = {}
     

@@ -10,12 +10,21 @@ INBOX_DIR = "email_shield/inbox"
 QUARANTINE_DIR = "email_shield/quarantine"
 MODEL_PATH = "model/phishing_model.pkl"
 
-def ensure_dirs():
+def ensure_dirs() -> None:
+    """Creates necessary directories if they don't exist."""
     for d in [INCOMING_DIR, INBOX_DIR, QUARANTINE_DIR]:
         if not os.path.exists(d):
             os.makedirs(d)
 
-def scan_file(filepath, predictor):
+def scan_file(filepath: str, predictor: PhishingPredictor) -> None:
+    """
+    Reads a file, extracts URLs, scans them using the AI predictor,
+    and moves the file to the appropriate folder.
+    
+    Args:
+        filepath: Absolute or relative path to the email file.
+        predictor: Instance of PhishingPredictor class.
+    """
     print(f"Scanning {filepath}...")
     
     try:
@@ -48,7 +57,10 @@ def scan_file(filepath, predictor):
         print(" -> Verdict: SAFE. Moving to Inbox.")
         move_file(filepath, INBOX_DIR)
 
-def move_file(src, dest_folder):
+def move_file(src: str, dest_folder: str) -> None:
+    """
+    Moves a file to the destination folder, handling name collisions.
+    """
     filename = os.path.basename(src)
     dest_path = os.path.join(dest_folder, filename)
     
