@@ -18,3 +18,13 @@ def extract_urls_from_text(text):
         clean_urls.append(url)
         
     return list(set(clean_urls)) # Return unique URLs
+
+def extract_recipient(text):
+    """
+    Extracts the email address from 'To: ...' line.
+    Returns 'unknown@company.com' if not found.
+    """
+    match = re.search(r'To:\s*([\w\.-]+@[\w\.-]+)', text)
+    if match:
+        return match.group(1)
+    return "unknown@company.com"
