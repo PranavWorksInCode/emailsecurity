@@ -1,4 +1,0 @@
-To: bob@company.com
-Subject: Safe Email 25
-
-Hello, check out this interesting article: https://www.wikipedia.org/wiki/Space

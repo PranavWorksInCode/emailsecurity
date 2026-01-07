@@ -1,0 +1,366 @@
+\documentclass[11pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows}
+
+\geometry{margin=1in}
+
+% Code listing style
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\title{\textbf{System Design Document: AI-Powered Email Shield}}
+\author{Development Team}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Introduction}
+The \textbf{Email Shield} is a security middleware designed to detect and neutralize phishing threats in real-time. By leveraging a Random Forest Machine Learning model, the system analyzes URL structures within emails to identify zero-day phishing campaigns that traditional blacklist filters might miss. This document details the architectural design, module interactions, and function-level logic of the system.
+
+\section{System Architecture}
+The system operates on a micro-service architecture consisting of three primary layers:
+\begin{enumerate}
+    \item \textbf{Monitoring Layer (Gateway)}: Watches for incoming email files.
+    \item \textbf{Security Layer}:
+        \begin{itemize}
+            \item \textbf{Heuristics}: Blocks dangerous attachments and spoofed files.
+            \item \textbf{AI Predictor}: Analyzes URLs for phishing.
+        \end{itemize}
+    \item \textbf{Action Layer (Handler)}: Routes emails to Inbox or Quarantine based on verdicts.
+    \item \textbf{Visualization Layer (Dashboard)}: Provides analytics on traffic, malware, and phishing.
+\end{enumerate}
+
+\section{Module Design & Function Interactions}
+
+\subsection{1. Gateway Module (\texttt{email\_shield/gateway.py})}
+The Gateway is the central orchestrator of the system. It continuously monitors the \texttt{incoming/} directory for new email files.
+
+\subsubsection{Function: \texttt{scan\_file()}}
+This function handles the lifecycle of a single email file. It reads the file, parses it, calls the AI predictor, and moves the file based on the result.
+
+\begin{lstlisting}[language=Python]
+def scan_file(filepath: str, predictor: PhishingPredictor, db: DBManager) -> None:
+    """
+    Reads a file, extracts URLs, scans them using the AI predictor,
+    and moves the file to the appropriate folder.
+    """
+    print(f"Scanning {filepath}...")
+    
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            content = f.read()
+    except Exception as e:
+        print(f"Error reading file: {e}")
+        return
+
+    # Extract Metadata
+    urls = email_parser.extract_urls_from_text(content)
+    user_email = email_parser.extract_recipient(content)
+    filename = os.path.basename(filepath)
+    
+    if not urls:
+        print(" -> No URLs found. Safe.")
+        db.log_scan(filename, user_email, "SAFE", "N/A")
+        move_file(filepath, INBOX_DIR)
+        return
+
+    print(f" -> Found {len(urls)} URLs. Checking against AI Model...")
+    results = predictor.predict_urls(urls)
+    
+    is_malicious = False
+    malicious_url = "N/A"
+    
+    for url, is_phishing in results.items():
+        if is_phishing:
+            print(f" [!!!] PHISHING DETECTED: {url}")
+            is_malicious = True
+            malicious_url = url
+            break # Log the first malicious URL found
+    
+    if is_malicious:
+        print(" -> Verdict: MALICIOUS. Moving to Quarantine.")
+        db.log_scan(filename, user_email, "PHISHING", malicious_url)
+        move_file(filepath, QUARANTINE_DIR)
+    else:
+        print(" -> Verdict: SAFE. Moving to Inbox.")
+        db.log_scan(filename, user_email, "SAFE", "N/A")
+        move_file(filepath, INBOX_DIR)
+\end{lstlisting}
+
+\paragraph{Interaction Flow:}
+\begin{enumerate}
+    \item \textbf{Input}: Receives a file path.
+    \item \textbf{Parsing}: Calls \texttt{email\_parser} to get URLs.
+    \item \textbf{Prediction}: Calls \texttt{predictor.predict\_urls} if URLs exist.
+    \item \textbf{Action}: Logs to DB via \texttt{db.log\_scan} and moves file via \texttt{move\_file}.
+\end{enumerate}
+
+\subsection{2. Malware Heuristic Module}
+Integrated into the Gateway, this module provides pre-computation security checks before the AI analysis.
+
+\begin{lstlisting}[language=Python]
+    # 1. Extension Blacklist
+    DANGEROUS_EXTS = ['.exe', '.bat', '.vbs', '.scr']
+    if any(att.lower().endswith(ext) for ext in DANGEROUS_EXTS):
+        is_malware = True
+
+    # 2. Magic Byte Verification (Anti-Spoofing)
+    # Checks if a safe extension (.pdf) contains binary signatures
+    if "Magic: 4D 5A" in content and not is_malware:
+        is_malware = True
+        malware_info = "Spoofed File Signature (MZ)"
+\end{lstlisting}
+
+\subsubsection{Function: \texttt{move\_file()}}
+Safe file moving utility that prevents overwriting by renaming duplicates.
+
+\begin{lstlisting}[language=Python]
+def move_file(src: str, dest_folder: str) -> None:
+    """
+    Moves a file to the destination folder, handling name collisions.
+    """
+    filename = os.path.basename(src)
+    dest_path = os.path.join(dest_folder, filename)
+    
+    # Handle duplicate names
+    counter = 1
+    while os.path.exists(dest_path):
+        name, ext = os.path.splitext(filename)
+        dest_path = os.path.join(dest_folder, f"{name}_{counter}{ext}")
+        counter += 1
+        
+    shutil.move(src, dest_path)
+\end{lstlisting}
+
+\subsection{2. Email Parser Module (\texttt{email\_shield/email\_parser.py})}
+A utility module for text extraction using Regular Expressions.
+
+\subsubsection{Function: \texttt{extract\_urls\_from\_text()}}
+Extracts all HTTP/HTTPS links from the raw email body.
+
+\begin{lstlisting}[language=Python]
+def extract_urls_from_text(text):
+    """
+    Finds all HTTP/HTTPS URLs in a text string.
+    Returns a list of URLs.
+    """
+    # Regex pattern for finding URLs
+    url_pattern = r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+[^\s]*'
+    
+    urls = re.findall(url_pattern, text)
+    
+    # Clean up trailing punctuation often caught by regex
+    clean_urls = []
+    for url in urls:
+        if url.endswith('.') or url.endswith(','):
+            url = url[:-1]
+        clean_urls.append(url)
+        
+    return list(set(clean_urls)) # Return unique URLs
+\end{lstlisting}
+
+\subsubsection{Function: \texttt{extract\_recipient()}}
+Parses the "To:" header to identify the target user.
+
+\begin{lstlisting}[language=Python]
+def extract_recipient(text):
+    """
+    Extracts the email address from 'To: ...' line.
+    Returns 'unknown@company.com' if not found.
+    """
+    match = re.search(r'To:\s*([\w\.-]+@[\w\.-]+)', text)
+    if match:
+        return match.group(1)
+    return "unknown@company.com"
+\end{lstlisting}
+
+\subsection{3. Predictor Module (\texttt{email\_shield/predictor.py})}
+Wraps the Machine Learning model interactions.
+
+\subsubsection{Method: \texttt{PhishingPredictor.predict\_urls()}}
+The core inference method that converts URLs to features and queries the model.
+
+\begin{lstlisting}[language=Python]
+    def predict_urls(self, urls: List[str]) -> Dict[str, bool]:
+        """
+        Takes a list of URL strings and returns a malicious/safe verdict for each.
+        """
+        if not self.model:
+            return {url: False for url in urls} # Fail open if no model
+
+        results = {}
+        for url in urls:
+            # Extract features
+            feat_dict = features.extract_features(url)
+            # Convert to list (matching training format)
+            feat_vector = [list(feat_dict.values())]
+            
+            # Predict (1 = Phishing, 0 = Safe)
+            prediction = self.model.predict(feat_vector)[0]
+            results[url] = bool(prediction == 1)
+            
+        return results
+\end{lstlisting}
+
+\subsection{4. Database Manager (\texttt{email\_shield/db\_manager.py})}
+Handles persistence using SQLite.
+
+\subsubsection{Method: \texttt{DBManager.log\_scan()}}
+Records the result of every scan for auditing and dashboard visualization.
+
+\begin{lstlisting}[language=Python]
+    def log_scan(self, filename, user_email, verdict, url_detected="N/A"):
+        """Inserts a new scan record."""
+        cursor = self.conn.cursor()
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        cursor.execute('''
+            INSERT INTO scan_logs (timestamp, filename, user_email, verdict, url_detected)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (timestamp, filename, user_email, verdict, url_detected))
+        self.conn.commit()
+\end{lstlisting}
+
+\subsection{5. Dashboard (\texttt{dashboard.py})}
+A Streamlit web application for analytics. Below is the snippet for generating the "Traffic Composition" chart.
+
+\subsubsection{Snippet: Traffic Composition Chart}
+\begin{lstlisting}[language=Python]
+with c1:
+    st.subheader("Traffic Composition")
+    verdict_counts = df['verdict'].value_counts().reset_index()
+    verdict_counts.columns = ['Verdict', 'Count']
+    
+    chart = alt.Chart(verdict_counts).mark_arc(innerRadius=50).encode(
+        theta=alt.Theta(field="Count", type="quantitative"),
+        color=alt.Color('Verdict', scale=alt.Scale(domain=['SAFE', 'PHISHING'], range=['#00CC96', '#FF4B4B'])),
+        tooltip=['Verdict', 'Count']
+    )
+    st.altair_chart(chart, use_container_width=True)
+\end{lstlisting}
+
+\subsubsection{Snippet: Scalable User Search}
+Designed for organizations with 500+ employees, replacing the dropdown with a search-and-match interface.
+
+\begin{lstlisting}[language=Python]
+    # Search Input
+    search_query = st.text_input("Search User by Email", placeholder="e.g. alice@company.com")
+    
+    # Default to debug or first available
+    target_user = "debug@test.com"
+    if target_user not in user_list:
+        target_user = user_list[0]
+
+    if search_query:
+        # ... (Search Logic Overrides target_user) ...
+        
+    if target_user:
+        # ... (Render Chart) ...
+\end{lstlisting}
+
+\subsubsection{Snippet: Forensics Search Logic}
+Enables full-text search across all columns in the audit log.
+
+\begin{lstlisting}[language=Python]
+# Filter by Search Term
+search_term = st.text_input("Search Logs", placeholder="Type to search ...")
+
+if search_term:
+    # Filter if any string column contains the search term (case-insensitive)
+    filtered_df = filtered_df[
+        filtered_df.apply(lambda row: row.astype(str).str.contains(search_term, case=False).any(), axis=1)
+    ]
+\end{lstlisting}
+
+    ]
+\end{lstlisting}
+
+\subsubsection{Snippet: Time-Based Forensics}
+Crucial for breach containment, allowing security teams to isolate traffic from specific windows (e.g., "Last Hour").
+
+\begin{lstlisting}[language=Python]
+    # Time Filtering Logic
+    if time_option == "Last Hour":
+        cutoff = datetime.datetime.now() - datetime.timedelta(hours=1)
+        filtered_df = df[df['timestamp'] >= cutoff]
+    elif time_option == "Custom Range":
+        # ... (Date picker logic) ...
+        filtered_df = df[(df['timestamp'] >= start_dt) & (df['timestamp'] <= end_dt)]
+\end{lstlisting}
+
+\subsubsection{Snippet: System Time Verification}
+Displayed at the top of the dashboard to ensure the operator is aware of the machine's local time context during investigations.
+
+\begin{lstlisting}[language=Python]
+current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+st.caption(f"System Time: {current_time} (Local Machine Time)")
+\end{lstlisting}
+
+current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+st.caption(f"System Time: {current_time} (Local Machine Time)")
+\end{lstlisting}
+
+\subsubsection{Snippet: Forensics Table Configuration}
+Displays the raw data with explicit Local Time formatting and Database IDs for reference.
+
+\begin{lstlisting}[language=Python]
+filtered_df['timestamp_str'] = filtered_df['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')
+st.dataframe(
+    filtered_df[['id', 'timestamp_str', 'user_email', 'verdict', 'url_detected']],
+    column_config={
+        "id": st.column_config.NumberColumn("Scan ID", format="%d"),
+        "timestamp_str": "Time (Local)"
+    }
+)
+\end{lstlisting}
+
+\section{Component Interaction Diagram}
+Below describes the step-by-step interaction for a detected phishing email:
+
+\begin{enumerate}
+    \item \textbf{Gateway} detects \texttt{invoice.txt} in \texttt{incoming/}.
+    \item \textbf{Gateway} reads content and calls \textbf{Email Parser} to extract URLs.
+    \item \textbf{Email Parser} returns \texttt{['http://malicious.xyz']}.
+    \item \textbf{Gateway} calls \textbf{Predictor} with the URL list.
+    \item \textbf{Predictor} computes features and queries the Random Forest model. Returns \texttt{\{'http://malicious.xyz': True\}}.
+    \item \textbf{Gateway} sees \texttt{True}, sets Verdict to \textbf{PHISHING}.
+    \item \textbf{Gateway} calls \textbf{DB Manager} to log the incident.
+    \item \textbf{Gateway} moves \texttt{invoice.txt} to \texttt{quarantine/}.
+    \item \textbf{Dashboard} (on refresh) pulls new log from DB and updates the "Phishing Attacks" counter.
+\end{enumerate}
+
+\end{document}

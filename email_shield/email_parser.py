@@ -28,3 +28,22 @@ def extract_recipient(text):
     if match:
         return match.group(1)
     return "unknown@company.com"
+
+def extract_sender(text):
+    """
+    Extracts the email address from 'From: ...' line.
+    Returns 'unknown_sender' if not found.
+    """
+    match = re.search(r'From:\s*([\w\.-]+@[\w\.-]+)', text)
+    if match:
+        return match.group(1)
+    return "unknown_sender"
+
+def extract_attachments(text):
+    """
+    Extracts filenames from 'Attachment: filename.ext' lines.
+    Returns a list of filenames.
+    """
+    # Mock header pattern: Attachment: malicious.exe
+    pattern = r'Attachment:\s*([^\n\r]+)'
+    return re.findall(pattern, text)

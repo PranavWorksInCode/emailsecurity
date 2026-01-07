@@ -19,20 +19,28 @@ class DBManager:
                 timestamp TEXT,
                 filename TEXT,
                 user_email TEXT,
+                sender_email TEXT,
                 verdict TEXT,
                 url_detected TEXT
             )
         ''')
+        
+        # Schema Migration for existing DB
+        try:
+            cursor.execute("ALTER TABLE scan_logs ADD COLUMN sender_email TEXT")
+        except sqlite3.OperationalError:
+            pass # Column likely already exists
+            
         self.conn.commit()
 
-    def log_scan(self, filename, user_email, verdict, url_detected="N/A"):
+    def log_scan(self, filename, user_email, verdict, url_detected="N/A", sender_email="unknown"):
         """Inserts a new scan record."""
         cursor = self.conn.cursor()
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         cursor.execute('''
-            INSERT INTO scan_logs (timestamp, filename, user_email, verdict, url_detected)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (timestamp, filename, user_email, verdict, url_detected))
+            INSERT INTO scan_logs (timestamp, filename, user_email, verdict, url_detected, sender_email)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (timestamp, filename, user_email, verdict, url_detected, sender_email))
         self.conn.commit()
 
     def get_all_logs(self):
