@@ -13,7 +13,10 @@ A machine learning-based security tool that simulates an **Secure Email Gateway*
     - `incoming/`: Drop text files here to be scanned.
     - `inbox/`: Safe emails end up here.
     - `quarantine/`: Phishing emails are moved here.
-- **`data/`**: Contains the training dataset.
+- **`tools/`**: Utility scripts.
+    - `generate_traffic.py`: Simulates traffic (Safe, Phishing, Malware, Spoofing).
+    - `reset_system.py`: Clears the database and all email folders.
+- `dashboard.py`: The Analytics Dashboard (Streamlit).
 
 ## Setup & Usage
 
@@ -33,6 +36,18 @@ A machine learning-based security tool that simulates an **Secure Email Gateway*
     python email_shield/gateway.py
     ```
     The script will start monitoring `email_shield/incoming/`.
+
+4.  **Simulate Traffic & Dashboard**:
+    ```bash
+    python tools/generate_traffic.py
+    streamlit run dashboard.py
+    ```
+
+5.  **Reset System**:
+    To clear all data and start fresh:
+    ```bash
+    python tools/reset_system.py
+    ```
 
 4.  **Test it**:
     - Create a text file in `email_shield/incoming/` with a URL inside.

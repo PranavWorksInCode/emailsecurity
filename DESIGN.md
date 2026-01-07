@@ -8,14 +8,18 @@ The **Email Shield** is an automated security middleware designed to intercept a
 ### 2.1 High-Level Overview
 The system follows a micro-service architecture pattern, consisting of three primary components:
 1.  **Gateway Service**: The entry point that monitors traffic (File System/Mail Server).
-2.  **Analysis Engine**: Neural core that extracts features and processes logic.
+2.  **Security Layer**:
+    -   **Heuristics**: Blocks dangerous attachments and spoofed files (Malware).
+    -   **Analysis Engine**: Neural core that extracts features and processes logic (Phishing).
 3.  **Action Handler**: Deterministic system that routes entities based on verdict.
 
 ```mermaid
 graph TD
     User[Incoming Mail Stream] --> Gateway[Gateway Service]
     Gateway --> Parser[Content Parser]
-    Parser -- Extracted URLs --> Predictor[ML Analysis Engine]
+    Parser -- Attachments --> Heuristics[Malware Heuristics]
+    Heuristics -- "Dangerous/Spoofed" --> Quarantine
+    Heuristics -- "Safe/None" --> Predictor[ML Analysis Engine]
     Predictor -- Verdict (Safe/Malicious) --> Router[Action Handler]
     Router --> Inbox[(Inbox Storage)]
     Router --> Quarantine[(Quarantine Isolation)]
@@ -27,6 +31,12 @@ graph TD
 -   **Responsibility**: File System Watcher.
 -   **Implementation**: Polling loop (Current) -> scalable to Webhook/API.
 -   **Fault Tolerance**: Implements try-catch blocks to prevent crashes on corrupt files.
+
+#### B. The Shield (Malware Heuristics)
+-   **Responsibility**: Pre-computation filtering of dangerous files.
+-   **Detection Logic**:
+    -   **Extension Blacklist**: Blocks `.exe`, `.bat`, `.vbs`, etc.
+    -   **Magic Byte Verification**: Detecting "Wolf in Sheep's Clothing" (e.g., an EXE renamed to `.pdf`) by inspecting file signatures (Anti-Spoofing).
 
 #### B. The Brain (Feature Extractor & Model)
 -   **Model Architecture**: Random Forest Classifier (Ensemble Learning).
@@ -122,8 +132,9 @@ Instead of ephemeral logs, every decision is written to a structured database (`
     -   `threat_confidence`: 0-100% score from the AI.
 
 ### B. The Executive Dashboard (Visualization)
-A generic web interface (built with **Streamlit** or **Kibana**) connects to the database to answer key questions:
-1.  **Threat Landscape**: Pie Chart showing % of Phishing vs. Safe traffic.
-2.  **High-Risk Users**: "Top 10 Most Targeted Employees" bar chart.
-    -   *Why*: Identifies who needs extra security training.
-3.  **breach Analysis**: A filterable table allowing the security team to drill down by `user_name` to see exactly which link they clicked.
+A generic web interface (built with **Streamlit**) connects to the database to answer key questions:
+1.  **Threat Landscape**: Pie Chart showing composition of **Safe**, **Phishing**, and **Malware** traffic.
+2.  **User Forensics**:
+    -   **Searchable Table**: Filter by Sender, Recipient, or Verdict.
+    -   **Malware Tracking**: Explicitly identifies the `sender_email` and the specific malicious artifact (File or URL).
+3.  **High-Risk Users**: Searchable User Analysis for deep-dive investigations.
