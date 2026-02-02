@@ -68,14 +68,13 @@ if df.empty:
 df['timestamp'] = pd.to_datetime(df['timestamp'])
 
 # --- HELPER: TREND CALCULATION ---
-def calculate_trend(df, verdict=None):
-    """Calculates % change compared to the previous hour."""
+def calculate_trend(df, time_window, verdict=None):
+    """Calculates % change compared to the previous time window."""
     now = datetime.datetime.now()
-    one_hour = datetime.timedelta(hours=1)
     
     # Time Windows
-    curr_start = now - one_hour
-    prev_start = now - (one_hour * 2)
+    curr_start = now - time_window
+    prev_start = now - (time_window * 2)
     
     # Slices
     curr_df = df[df['timestamp'] >= curr_start]
@@ -104,16 +103,32 @@ total_phishing = len(df[df['verdict'] == 'PHISHING'])
 total_malware = len(df[df['verdict'] == 'MALWARE'])
 total_safe = len(df[df['verdict'] == 'SAFE'])
 
-# Calculate Trends (vs Last Hour)
-trend_traffic = calculate_trend(df)
-trend_phishing = calculate_trend(df, 'PHISHING')
-trend_malware = calculate_trend(df, 'MALWARE')
-trend_safe = calculate_trend(df, 'SAFE')
+# Determine Trend Window based on selection
+if selected_interval == "Off":
+    trend_window = datetime.timedelta(hours=1)
+    window_label = "1h"
+else:
+    trend_window = datetime.timedelta(milliseconds=interval_ms)
+    # Simple label mapping
+    label_map = {
+        "1 Minute": "1m",
+        "5 Minutes": "5m", 
+        "10 Minutes": "10m", 
+        "30 Minutes": "30m", 
+        "1 Hour": "1h"
+    }
+    window_label = label_map.get(selected_interval, "Custom")
 
-col1.metric("Total Traffic", f"{total_emails}", f"{trend_traffic:.1f}% (1h)")
-col2.metric("Phishing", f"{total_phishing}", f"{trend_phishing:.1f}% (1h)", delta_color="inverse")
-col3.metric("Malware Blocked", f"{total_malware}", f"{trend_malware:.1f}% (1h)", delta_color="inverse")
-col4.metric("Safe Emails", f"{total_safe}", f"{trend_safe:.1f}% (1h)")
+# Calculate Trends (vs Selected Window)
+trend_traffic = calculate_trend(df, trend_window)
+trend_phishing = calculate_trend(df, trend_window, 'PHISHING')
+trend_malware = calculate_trend(df, trend_window, 'MALWARE')
+trend_safe = calculate_trend(df, trend_window, 'SAFE')
+
+col1.metric("Total Traffic", f"{total_emails}", f"{trend_traffic:.1f}% ({window_label})")
+col2.metric("Phishing", f"{total_phishing}", f"{trend_phishing:.1f}% ({window_label})", delta_color="inverse")
+col3.metric("Malware Blocked", f"{total_malware}", f"{trend_malware:.1f}% ({window_label})", delta_color="inverse")
+col4.metric("Safe Emails", f"{total_safe}", f"{trend_safe:.1f}% ({window_label})")
 col5.metric("Active Users", f"{df['user_email'].nunique()}")
 
 st.divider()
@@ -171,6 +186,129 @@ with c2:
             st.caption(f"{target_user} has encountered {phish_count} phishing attempts.")
     else:
         st.info("No user data available yet.")
+
+# --- ADVANCED FORENSICS ---
+st.divider()
+st.header("🕵️ Advanced Forensics")
+
+# Prepare Forensics Data
+if not df.empty:
+    # 1. Domain Extraction
+    df['sender_domain'] = df['sender_email'].apply(lambda x: x.split('@')[-1] if '@' in str(x) else 'Unknown')
+    
+    # 2. File Extension
+    df['file_ext'] = df['filename'].apply(lambda x: os.path.splitext(x)[1] if pd.notnull(x) else 'None')
+    
+    # 3. Time Components
+    df['hour'] = df['timestamp'].dt.hour
+    df['day_name'] = df['timestamp'].dt.day_name()
+    # Order days for heatmap
+    days_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    
+    # Filter for Threats
+    threats_df = df[df['verdict'].isin(['PHISHING', 'MALWARE'])]
+
+    # ROW 1: Attacking Domains & Targeted Users
+    fc1, fc2 = st.columns(2)
+    
+    with fc1:
+        st.subheader("🚨 Top Attacking Domains")
+        if not threats_df.empty:
+            domain_counts = threats_df['sender_domain'].value_counts().reset_index().head(10)
+            domain_counts.columns = ['Domain', 'Attacks']
+            
+            domain_chart = alt.Chart(domain_counts).mark_bar().encode(
+                x='Attacks',
+                y=alt.Y('Domain', sort='-x'),
+                color=alt.value('#FF4B4B'),
+                tooltip=['Domain', 'Attacks']
+            )
+            st.altair_chart(domain_chart, use_container_width=True)
+        else:
+            st.info("No threats detected yet.")
+
+    with fc2:
+        st.subheader("🎯 Most Targeted Users")
+        if not threats_df.empty:
+            target_counts = threats_df['user_email'].value_counts().reset_index().head(10)
+            target_counts.columns = ['User', 'Incidents']
+            
+            target_chart = alt.Chart(target_counts).mark_bar().encode(
+                x='Incidents',
+                y=alt.Y('User', sort='-x'),
+                color=alt.value('#FF4B4B'),
+                tooltip=['User', 'Incidents']
+            )
+            st.altair_chart(target_chart, use_container_width=True)
+        else:
+            st.info("No threats detected yet.")
+
+    # ROW 2: Attack Timeline & Heatmap
+    fc3, fc4 = st.columns(2)
+    
+    with fc3:
+        st.subheader("📈 Attack Timeline")
+        # Aggregation by hour for timeline
+        timeline_df = df.copy()
+        timeline_df['time_bucket'] = timeline_df['timestamp'].dt.floor('H')
+        timeline_counts = timeline_df.groupby(['time_bucket', 'verdict']).size().reset_index(name='count')
+        
+        timeline_chart = alt.Chart(timeline_counts).mark_area(opacity=0.6).encode(
+            x='time_bucket:T',
+            y='count:Q',
+            color=alt.Color('verdict', scale=alt.Scale(domain=['SAFE', 'PHISHING', 'MALWARE'], range=['#00CC96', '#FF4B4B', '#8000FF'])),
+            tooltip=['time_bucket', 'verdict', 'count']
+        )
+        st.altair_chart(timeline_chart, use_container_width=True)
+
+    with fc4:
+        st.subheader("🔥 Global Attack Heatmap")
+        if not threats_df.empty:
+            heatmap_counts = threats_df.groupby(['day_name', 'hour']).size().reset_index(name='attacks')
+            
+            heatmap = alt.Chart(heatmap_counts).mark_rect().encode(
+                x=alt.X('hour:O', title='Hour of Day'),
+                y=alt.Y('day_name:O', sort=days_order, title='Day of Week'),
+                color=alt.Color('attacks:Q', scale=alt.Scale(scheme='orangered')),
+                tooltip=['day_name', 'hour', 'attacks']
+            )
+            st.altair_chart(heatmap, use_container_width=True)
+        else:
+            st.info("No threats detected yet.")
+
+    # ROW 3: Artifacts & Repeat Offenders
+    fc5, fc6 = st.columns(2)
+    
+    with fc5:
+        st.subheader("📦 Malware Artifacts")
+        malware_df = df[df['verdict'] == 'MALWARE']
+        if not malware_df.empty:
+            ext_counts = malware_df['file_ext'].value_counts().reset_index()
+            ext_counts.columns = ['Extension', 'Count']
+            
+            pie = alt.Chart(ext_counts).mark_arc(outerRadius=80).encode(
+                theta=alt.Theta("Count", stack=True),
+                color=alt.Color("Extension"),
+                tooltip=["Extension", "Count"]
+            )
+            st.altair_chart(pie, use_container_width=True)
+        else:
+            st.info("No malware detected yet.")
+            
+    with fc6:
+        st.subheader("⚠️ Repeated Offenders")
+        if not threats_df.empty:
+            offenders = threats_df['sender_email'].value_counts()
+            repeat_offenders = offenders[offenders > 1].reset_index()
+            repeat_offenders.columns = ['Sender Email', 'Attack Count']
+            
+            st.dataframe(
+                repeat_offenders, 
+                use_container_width=True,
+                hide_index=True
+            )
+        else:
+            st.info("No repeated offenders.")
 
 # --- TIME FILTER ---
 st.divider()

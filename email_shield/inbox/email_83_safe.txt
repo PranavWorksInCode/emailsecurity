@@ -1,5 +1,0 @@
-From: HR@company.com
-To: alice@company.com
-Subject: Safe Email 83
-
-Hello, check out this interesting article: https://www.wikipedia.org/wiki/Cooking

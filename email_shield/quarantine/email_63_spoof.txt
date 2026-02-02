@@ -1,7 +1,0 @@
-From: sneaky@apt-group.org
-To: charlie@company.com
-Subject: Resume 63
-Attachment: my_resume.pdf
-Magic: 4D 5A
-
-Here is my resume.

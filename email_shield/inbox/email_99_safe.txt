@@ -1,5 +1,0 @@
-From: HR@company.com
-To: david@company.com
-Subject: Safe Email 99
-
-Hello, check out this interesting article: https://www.wikipedia.org/wiki/Python
