@@ -104,3 +104,11 @@ To deploy this in a Fortune 500 Enterprise setting, the system is designed to sc
 - **Containerization**: Wrapping `production_gateway.py` into a Docker image deployed on **AWS ECS**, **Azure Container Apps**, or **Kubernetes**.
 - **Event Streaming**: Transitioning the single-file loop ingestion to **Kafka Event Streams** for horizontally scaled parsing via Celery workers.
 - **Advanced Threat Intel**: Roadmap includes Link Unshortening, Homograph Attack Detection (Typosquatting), Computer Vision for stolen banking logos, and NLP for high-urgency contextual scanning.
+
+---
+
+## 📄 License & Copyright
+
+&copy; 2024 PranavWorksInCode. All Rights Reserved.
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. (If no LICENSE file exists, this code is provided for educational and portfolio purposes.)
