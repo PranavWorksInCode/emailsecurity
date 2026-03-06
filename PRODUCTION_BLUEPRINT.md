@@ -1,43 +1,43 @@
-# Production Deployment Blueprint: Microsoft 365 Integration
+# My Production Deployment Blueprint: Microsoft 365 Integration
 
-This document outlines how to transform the **Email Shield** from a local file-based simulation into a cloud-native security application that protects a real organization (e.g., using Microsoft 365).
+This document outlines how I plan to transform my **Email Shield** from a local file-based simulation into a cloud-native security application that protects a real organization (for example, using Microsoft 365).
 
 ## 1. The Architecture Change
 
-| Feature | Simulation (Current) | Production (Real World) |
+| Feature | My Simulation (Current) | Production (Real World Target) |
 | :--- | :--- | :--- |
 | **Input** | Reads text files from `incoming/` | Polls **Microsoft Graph API** (`/messages`) |
-| **Analysis** | Running locally on laptop | Runs in **Docker / Azure Functions** |
+| **Analysis** | Running locally on my laptop | Runs in **Docker / Azure Functions** |
 | **Action** | Moves file to `quarantine/` | Sends API call to **Move to Junk / Delete** |
 | **Storage** | Local SQLite DB | Managed SQL Database (PostgreSQL/AzureSQL) |
 
 ## 2. The Production Code (`production_gateway.py`)
 
-Save this code to deploy server-side. It replaces the file-watching loop with an API polling loop.
+I wrote this placeholder code to deploy server-side eventually. It replaces my file-watching loop with an API polling loop.
 
 ```python
 import time
 import requests
 import json
 from predictor import PhishingPredictor
-# db_manager would connect to a real SQL server
+# My db_manager would connect to a real SQL server here
 from db_manager import DBManager 
 
-# --- CONFIGURATION ---
+# --- MY CONFIGURATION ---
 TENANT_ID = "YOUR_TENANT_ID"
 CLIENT_ID = "YOUR_CLIENT_ID"
 CLIENT_SECRET = "YOUR_CLIENT_SECRET"
-TARGET_MAILBOX = "employees@company.com" # Or iterate through all users
+TARGET_MAILBOX = "employees@company.com" # Or I could iterate through all users
 GRAPH_API_URL = "https://graph.microsoft.com/v1.0"
 
 class ProductionGateway:
     def __init__(self):
         self.predictor = PhishingPredictor(model_path="model/phishing_model.pkl")
-        self.db = DBManager() # Connects to Cloud SQL
+        self.db = DBManager() # Connects to my Cloud SQL
         self.access_token = self._get_auth_token()
 
     def _get_auth_token(self):
-        """Authenticates with Azure AD to get an access token."""
+        """Authenticates with Azure AD to get my access token."""
         url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
         data = {
             'client_id': CLIENT_ID,
@@ -73,7 +73,7 @@ class ProductionGateway:
         print(f" [!!!] Action Taken: Quarantined Message {message_id}")
 
     def run(self):
-        print("Starting Cloud Email Shield...")
+        print("Starting my Cloud Email Shield...")
         while True:
             emails = self.fetch_new_emails()
             
@@ -85,8 +85,8 @@ class ProductionGateway:
 
                 print(f"Analyzing: {subject} from {sender}")
                 
-                # Extract URLs (Reuse our parser logic)
-                # Note: Real body is HTML, might need BeautifulSoup to clean tags first
+                # Extract URLs (Reusing my parser logic)
+                # Note: Real body is HTML, I might need BeautifulSoup to clean tags first
                 urls = extract_urls_from_text(body_content) 
                 
                 # AI Prediction
@@ -102,20 +102,20 @@ class ProductionGateway:
             
             time.sleep(5) # Poll every 5 seconds
 
-# Helper function placeholder
+# Helper function placeholder I wrote
 def extract_urls_from_text(text):
     import re
     return re.findall(r'https?://[^\s<>"]+|www\.[^\s<>"]+', text)
 ```
 
-## 3. Deployment Instructions
+## 3. My Deployment Instructions
 
-To actually use this in a business:
+To actually use this in a business environment:
 
 1.  **Register App in Azure Portal**:
     *   Go to **Azure Active Directory** -> **App Registrations**.
     *   Create a new App (e.g., "AI-Email-Shield").
-    *   **Permissions**: Add `Mail.ReadWrite` (Application Permission) so it can scan *all* mailboxes without user login.
+    *   **Permissions**: Add `Mail.ReadWrite` (Application Permission) so my app can scan *all* mailboxes without user login.
     *   Copy the `Tenant ID`, `Client ID`, and `Client Secret`.
 
 2.  **Containerize (Docker)**:
@@ -133,4 +133,4 @@ To actually use this in a business:
     *   Set the environment variables (IDs and Secrets) securely in the cloud console.
 
 4.  **Integration**:
-    *   The script will now run 24/7 in the cloud, silently watching the company's mailboxes and moving phishing links to Junk instantly.
+    *   My script will now run 24/7 in the cloud, silently watching the company's mailboxes and moving phishing links to Junk instantly.
