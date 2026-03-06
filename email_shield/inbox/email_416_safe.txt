@@ -1,0 +1,5 @@
+From: HR@company.com
+To: alice@company.com
+Subject: Safe Email 416
+
+Hello, check out this interesting article: https://www.wikipedia.org/wiki/Travel

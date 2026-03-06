@@ -1,12 +1,10 @@
 # Project Presentation Guide: AI-Powered Email Shield
 
-Use this guide to showcase this project in your portfolio, GitHub README, or during a job interview.
-
 ## 1. The "Elevator Pitch" (30 Seconds)
 "I built an automated **AI Security Gateway** that detects phishing attacks in real-time. Traditional filters often rely on static blacklists, which are too slow for new threats. My system uses **Machine Learning (Random Forest)** to analyze the structure of a URL—looking at feature engineering like entropy, special characters, and IP usage—to predict if a link is malicious with **100% accuracy** on my test dataset. It acts as a middleware, automatically quarantining threats before they reach the user's inbox."
 
 ## 2. The Visual Demo (The "Wow" Factor)
-When showing this to a recruiter or friend, do the **Split Screen Demo**:
+
 
 1.  **Left Screen**: Open a terminal running the **Gateway** (`python email_shield/gateway.py`).
 2.  **Right Screen**: Open a terminal running the **Traffic Generator** (`python tools/generate_traffic.py`).
@@ -19,7 +17,7 @@ When showing this to a recruiter or friend, do the **Split Screen Demo**:
 *   **Scalability**: "The architecture is modular. Currently, it scans files, but the `Predictor` class is decoupled, meaning I could easily wrap it in a REST API (using Flask/FastAPI) to serve thousands of requests per second for a web app."
 
 ## 4. Architecture Diagram
-Draw this on a whiteboard if asked:
+
 
 ```text
 [ Incoming Email ] 
