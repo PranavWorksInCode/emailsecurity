@@ -107,8 +107,3 @@ To deploy this in a Fortune 500 Enterprise setting, the system is designed to sc
 
 ---
 
-## 📄 License & Copyright
-
-&copy; 2026 PranavWorksInCode. All Rights Reserved.
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. (If no LICENSE file exists, this code is provided for educational and portfolio purposes.)
